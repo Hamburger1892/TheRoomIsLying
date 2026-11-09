@@ -1,0 +1,9 @@
+{
+  "name": "The Room Is Lying - Blackthorn Horror",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": { "TheRoomIsLying": { "$path": "src/server" } },
+    "ReplicatedStorage": { "TRILShared": { "$path": "src/shared" } },
+    "StarterPlayer": { "StarterPlayerScripts": { "TRILClient": { "$path": "src/client" } } }
+  }
+}

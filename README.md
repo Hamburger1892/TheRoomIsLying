@@ -1,80 +1,102 @@
-# THE ROOM IS LYING — Observation Prototype
+# THE ROOM IS LYING — Blackthorn Horror
 
-Memorize a cozy cartoon living room. Survive the blackout. Decide whether the room changed. This version implements Phase 1 of the supplied development brief and replaces the earlier two-door clue puzzle.
+A walkable, atmospheric horror observation game. Explore Blackthorn Station, meet its masked attendants, and enter a private study or a shared manor. Memorize the displays, survive the blackout, vote on whether anything disappeared, then document every missing object for extra Mind Coins.
 
-## What is implemented
+## Installed in your current Studio project
 
-- A programmatically built cutaway living room with **31 recognizable environmental objects** and roughly 150 anchored parts: sofa, cushions, coffee table, books, mug, fruit bowl, TV, cabinet, speaker, bookshelf, duck, painting, clock, window, curtains, plants, chair, ottoman, floor lamp, side table, vase, basket, slippers, and trophy.
-- Synchronized repeating rounds: **15 seconds memorize → 2 seconds blackout → 10 seconds vote → 5 seconds results**. All players see the same room and round timer.
-- **70% changed / 30% unchanged** probability. Nine change types: disappearance, color, movement, rotation, size, appearance, tilted painting, swapped cushions, and lamp color. Difficulty increases after rounds three and seven; movement, rotation, and size changes become smaller.
-- Every round restores the original transforms, sizes, colors, transparency, collision settings, and lamp color before memorization.
-- Fixed observation camera. Avatars remain backstage. Landscape phones use side controls; portrait and desktop use top/bottom panels. Countdown and timer bar use server time.
-- Large Changed/Unchanged buttons; keyboard **1/2** and gamepad **X/Y** also vote. Server-side round, phase, time, type, eligibility, rate, and duplicate checks protect rewards.
-- Results name and outline the changed object, including a wireframe at the old location when something disappears.
-- Session points, streak, best streak, total correct answers, Mind Coins, lifetime coins, XP, and levels. In-game ranks panel plus Roblox leaderstats.
-- Late joiners watch the current round and enter automatically at the next memorization. Disconnects release profile/connection state.
+The current Studio place contains the lobby, both map previews, and the full game scripts. **Press Play** to start in the courtyard. **Save with Ctrl+S** to retain the place edits; no automated place save or public publication is claimed.
 
-## In your current Studio project
+The previous observation prototype is disabled and preserved under `ServerStorage.TRILObservationBackup_*`, including the previous preview and a lighting backup. The earlier clue-puzzle backup is also retained. Only the new bootstrap and new client scripts should be enabled.
 
-The upgrade was installed directly into the connected Studio experience. The earlier puzzle scripts are disabled and retained in a timestamped `ServerStorage.TRILLegacyBackup_*` folder. The Baseplate and SpawnLocation remain in the place.
+## What to do
 
-Press **Play**. You do not need to paste any code. The edit-time `Workspace.TRILRoomPreview` is replaced by the live shared room when a test starts, and returns when the test stops. **Save the place with Ctrl+S** to retain the Studio edits on disk/cloud; no automated save or publication is claimed.
+1. Walk around the courtyard. Hold **E** or tap a proximity prompt to speak to an NPC.
+2. **The Curator** runs the shop. The **Truth Lens costs exactly 1,000 Mind Coins**. The Bellkeeper opens map selection, and the Archivist explains investigations.
+3. Use the gold **Play** button at the bottom to choose a map:
+   - **The Keeper's Study:** a private solo investigation, 34×32 studs, with 12 display objects.
+   - **Blackthorn Manor:** a 76×62-stud map with four chambers and a central gallery, containing 26 displays. Up to three players share the investigation. The queue starts when three join or after 15 seconds; a smaller party can therefore still play. Cancel the queue with the bottom button.
+4. Explore on foot and memorize what belongs on each brass stand. The study gives 30 seconds; the manor gives 40.
+5. During a two-second blackout, either nothing disappears (30% chance), or several objects disappear (70%). A changed study round removes 2–4 objects; a changed manor round removes 3–6.
+6. Search for 60 seconds in the study or 90 in the manor. Vote **Something Is Missing** or **Nothing Is Missing**. You can continue exploring after your answer is locked.
+7. Hold E/tap at an empty display spot to report a disappearance. Every different missing object pays **75 bonus Mind Coins** immediately, once per player. Finding the same object again pays nothing. Reporting a present object pays nothing.
+8. Results last eight seconds. A correct main answer pays **60 Mind Coins**, plus a capped streak bonus, and awards points/XP. Evidence bonuses are separate and are not paid twice during results.
+9. Three rounds complete an investigation. You return to the lobby with a **75-coin completion reward**. Return early with the HUD button if needed; bonuses already earned stay in your wallet, but an unfinished round's answer reward is not awarded.
 
-## Project structure
+## Controls
+
+| Action | Desktop | Mobile |
+| --- | --- | --- |
+| Walk / look | WASD; normal Roblox camera/right-drag | Roblox movement and camera controls |
+| Sprint | Hold Shift | Normal movement speed |
+| Interact / report an empty display | Hold E | Tap/hold native prompt |
+| Flashlight | F or HUD Light button | Light button |
+| Missing / unchanged vote | 1 / 2 or the large buttons | Large buttons |
+| Use owned Truth Lens | Q or lens button | Lens button |
+| Open map selection in lobby | P or Play | Play |
+
+The close walking camera keeps the mouse available for UI. The flashlight follows your viewing direction. Avatars are no longer anchored spectators; they physically explore the rooms. All players in a manor visit share the same changes, but votes and evidence credit are independent.
+
+## The Truth Lens
+
+The shop validates your proximity, wallet, and ownership on the server. Buying with fewer than 1,000 coins is rejected; repeat purchases cannot charge again. Ownership grants a modeled magnifying-glass Tool and its HUD action.
+
+The lens reveals whether the room changed and the number of missing objects, **once per search round**. It does not identify their locations and grants no evidence bonus automatically. It is not consumed after use. The held model briefly appears and then stows so it does not block exploration.
+
+## Visual design
+
+The lobby includes an aged hotel facade, towers, iron fencing, paved paths, benches, graves, masked NPCs, an antique shop, climbing ivy, bare trees, mist, a cratered moon backdrop, cloud veils, and a native star sky. The rooms use brick, stone, marble, wood, fabric, brass, wall panels, cornices, ceiling beams, framed portraits, bookshelves, furniture, and recognizable artifact displays. Realistic lighting, warm lanterns, cool window light, restrained bloom, and a flashlight establish the horror mood.
+
+All geometry is newly authored from native parts/materials. No Toolbox scripts, third-party packages, fabricated asset IDs, paid assets, or external uploads are required. Graphics quality still depends on the player's device and Roblox quality settings. This version has no licensed ambience/music yet; no working ambient audio is claimed.
+
+## Code structure
 
 ```text
-ServerScriptService
-  TheRoomIsLying
-    Main             Script
-    RoomBuilder      ModuleScript
-    Anomalies        ModuleScript
-    RoundRules       ModuleScript
-    Tuning           ModuleScript
-ReplicatedStorage
-  TRILShared
-    Audio            ModuleScript
-StarterPlayer / StarterPlayerScripts
-  TRILClient
-    Main             LocalScript
-    ObservationUI    ModuleScript
-ServerStorage
-  TRILObservationTests
-    Validation       ModuleScript
+ServerScriptService / TheRoomIsLying
+  Main              Script: lobby, queue, private visits, phases, remotes, rewards
+  WorldBuilder      ModuleScript: courtyard, NPCs, both maps, reset/hide, lighting
+  GameRules         ModuleScript: wallet transactions, vote/find/reward rules
+  Profiles          ModuleScript: live profile loading, lease, autosave, shutdown
+ReplicatedStorage / TRILShared
+  Settings          ModuleScript: price, reward/pacing defaults, map capacities
+StarterPlayer / StarterPlayerScripts / TRILClient
+  Main              LocalScript: walking camera, flashlight, controls, evidence marks
+  Interface         ModuleScript: lobby, shop, selection, voting, results, blackout
+ServerStorage / TRILHorrorTests
+  Validation        ModuleScript: detached environment and rule checks
+Workspace / TRILHorrorPreview
+  Edit-time previews (removed in the playtest copy)
 ```
 
-The server creates `ReplicatedStorage.TRILNet.Vote` and `TRILState` at runtime. It stores the selected anomaly and correct answer only in server-local variables. Replicated state includes anomaly details only during Results. Geometry necessarily replicates for players to observe it; this is not protection against a modified client automatically comparing geometry.
+The server creates `TRILHorrorNet` remotes and runtime lobby/private visit models. The selected missing objects remain server-local until results, except the deliberate private answer revealed to a lens owner. Every display's prompt is enabled during search, not just missing ones, so prompt availability is not the answer. Geometry necessarily replicates; this is not a guarantee against a modified client comparing scene geometry automatically.
 
-## Installing into a different place
+## Saving
 
-Create the folders and instances shown above. Paste each file from `src/server`, `src/client`, and `src/shared` into the corresponding instance. `*.server.luau` is a Script, `*.client.luau` is a LocalScript, and other `.luau` source files are ModuleScripts. Names exclude those file extensions. Use a single active server bootstrap and client bootstrap. Disable/remove the earlier `RoomUI` LocalScript and earlier server scripts so they do not run beside this version.
+**Studio uses an in-memory wallet intentionally. Stopping Play resets Studio test coins and purchases. No live DataStore was accessed in these tests.** This prevents tests from writing the real economy.
 
-The room is built around `(0, 48, 0)`, with a navy diorama backdrop. Use a fresh Baseplate or check that this space is clear in an existing map. No paid assets, third-party libraries, HTTP access, API keys, DataStore access, or audio uploads are needed for Phase 1.
+On published live servers, `Profiles` uses `DataStoreService` with leased records, bounded retries, serialized saves, periodic autosaves, an immediate save attempt for purchases, and a shutdown save. It stores coins, score/streak records, XP, evidence totals, and lens ownership. A failed load falls back to session progress without overwriting the old record; permanent purchases are blocked when the live saved record is unavailable. A failed purchase save is reported as pending, with later save attempts.
 
-For Rojo, `default.project.json` maps all runtime scripts; `rojo serve default.project.json` connects a Studio Rojo plugin. An alternative is `rojo build default.project.json -o TheRoomIsLying.rbxlx`, followed by opening that file in Studio. Rojo itself was not installed or executed during this task. The direct Studio installation was tested.
+Live persistence has **not** been verified and must be tested in a separate test experience before release. No API/security setting was automatically changed. Never advertise guaranteed saved purchases until load, purchase, reconnect, failure, and shutdown behavior have been checked on live test servers.
 
-## Scoring and tuning
+## Run elsewhere / Rojo
 
-A correct answer gives 100 points plus a capped streak bonus and 10 Mind Coins plus a streak bonus. Every fifth consecutive correct answer adds 25 extra coins. Wrong or missing answers give no points and break the streak. Spectators are not rewarded or penalized. XP increases by 25 per correct answer, with one level per 100 XP.
+`default.project.json` maps the server folder, shared Settings, and client folder. With Rojo installed, use `rojo serve default.project.json`, or `rojo build default.project.json -o TheRoomIsLying.rbxlx` and open the resulting place. Rojo was not installed or executed here.
 
-Defaults live in `Tuning.luau`. Optional Experience Configs can be enabled with that module's `UseExperienceConfigs` attribute; keys use the `TRIL_` prefix. Values are bounded and read at round boundaries, with defaults when the service is unavailable. This is optional and disabled initially.
+Without Rojo, create the exact folders/instances shown above and paste each corresponding source file. `*.server.luau` becomes a Script, `*.client.luau` a LocalScript, and other `.luau` files ModuleScripts. Names omit file extensions. Disable earlier server/UI bootstraps. Press Play; the world is generated automatically. The lobby is centered around `(0,8,0)`; private rooms occupy separated coordinates starting around `(980,48,0)`.
 
-For faster **Studio-only** testing, add numeric attributes to the Tuning module: `MemorizeSeconds`, `BlackoutSeconds`, `VoteSeconds`, `ResultsSeconds`, or `ChangeChance`. A server-only `ForceKind` attribute on the Anomalies module can select `None`, `Disappeared`, `Color`, `Moved`, `Rotated`, `Resized`, `Appeared`, `Painting`, `Swapped`, or `Light`. These overrides are ignored outside Studio. Remove them before normal playtesting. The installed project has normal timings and random changes restored after validation.
+## Validation and testing helpers
 
-## Audio and later phases
+See [docs/VALIDATION.md](docs/VALIDATION.md) for what was actually executed and what still needs testing.
 
-`Audio.luau` contains clearly marked **silent placeholders** for ticking, blackout, success, failure, streaks, and ambience. Insert approved audio IDs you have permission to use; empty values make no asset requests. No working sound effects are claimed.
-
-Progress currently lasts **only for the server session**. DataStore persistence, cosmetic purchases, daily challenges, achievements, more room themes, rare changes, matchmaking, game icons, and public release work remain later phases. The prototype makes no persistence calls, so Studio API access does not need enabling. DataStore saving and error/retry handling must be implemented and tested before persistent rewards are advertised.
-
-## Validation
-
-See [docs/VALIDATION.md](docs/VALIDATION.md) for executed checks and remaining acceptance tests. To rerun the geometry/rules tests, put `tests/Validation.luau` into the `ServerStorage.TRILObservationTests.Validation` ModuleScript. In Studio's Command Bar while stopped:
+Place `tests/Validation.luau` in `ServerStorage.TRILHorrorTests.Validation` and run this while stopped:
 
 ```lua
 local server = game.ServerScriptService.TheRoomIsLying
-print(require(game.ServerStorage.TRILObservationTests.Validation)(
-    require(server.RoomBuilder), require(server.Anomalies), require(server.RoundRules)
+print(require(game.ServerStorage.TRILHorrorTests.Validation)(
+    require(server.WorldBuilder), require(server.GameRules),
+    require(game.ReplicatedStorage.TRILShared.Settings)
 ))
 ```
 
-Restart the playtest after changing modules to avoid cached require results. The test creates a detached room and destroys it when finished.
+For local Studio QA only, attributes on the Main Script can override `MemorizeSeconds`, `BlackoutSeconds`, `SearchSeconds`, `ResultsSeconds`, and `ForceChanged`. These are ignored on live servers and have been cleared in the installed project.
+
+A Studio-only **server BindableFunction** in `ServerStorage.TRILHorrorQA` supports temporary coin setup and state inspection. It is not a client remote and is not created on live servers. Test balances existed only in the stopped playtest and were not saved. All normal players start from their own profile balance; no free lens or 1,000-coin grant is shipped.

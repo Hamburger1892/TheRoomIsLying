@@ -1,129 +1,69 @@
 --!strict
 local Players=game:GetService("Players")
 local RS=game:GetService("ReplicatedStorage")
+local Input=game:GetService("UserInputService")
 local Run=game:GetService("RunService")
 local Http=game:GetService("HttpService")
-local Input=game:GetService("UserInputService")
 local player=Players.LocalPlayer
-local UI=require(script.Parent.ObservationUI)
-local audio=require(RS:WaitForChild("TRILShared"):WaitForChild("Audio"))
-local net=RS:WaitForChild("TRILNet")
-local vote=net:WaitForChild("Vote")
-local stateFolder=RS:WaitForChild("TRILState")
-local camera=workspace.CurrentCamera
-local originalType=camera.CameraType
-local originalFov=camera.FieldOfView
-local connections={}
-local revealObjects={}
-local lastPhase=nil
-local lastSecond=-1
-local lastViewport=Vector2.zero
-local lastRound=-1
-local state=nil
-local ui=UI.new(player:WaitForChild("PlayerGui"),function(roundId,choice) vote:FireServer(roundId,choice) end)
-local controls=nil
-local hiddenTouch={}
-local function hideTouch(gui)
-	if gui.Name~="TouchGui" or not gui:IsA("ScreenGui") or hiddenTouch[gui]~=nil then return end
-	hiddenTouch[gui]=gui.Enabled
-	gui.Enabled=false
-	table.insert(connections,gui:GetPropertyChangedSignal("Enabled"):Connect(function() if gui.Enabled then gui.Enabled=false end end))
+local settings=require(RS:WaitForChild("TRILShared"):WaitForChild("Settings"))
+local net=RS:WaitForChild("TRILHorrorNet") local action=net:WaitForChild("Action")
+local Interface=require(script.Parent.Interface)
+local state=nil local connections={} local outlines={} local lastRound=""
+local flashlightOn=true local sprinting=false
+local lamp=Instance.new("Part") lamp.Name="TRILLocalFlashlight" lamp.Size=Vector3.new(0.1,0.1,0.1) lamp.Anchored=true lamp.Transparency=1 lamp.CanCollide=false lamp.CanQuery=false lamp.CanTouch=false lamp.Parent=workspace
+local spot=Instance.new("SpotLight") spot.Name="Flashlight" spot.Face=Enum.NormalId.Front spot.Color=Color3.fromRGB(223,224,208) spot.Brightness=2.8 spot.Range=36 spot.Angle=72 spot.Shadows=true spot.Parent=lamp
+local function toggleLight() flashlightOn=not flashlightOn spot.Enabled=flashlightOn end
+local function send(verb,arg,extra) action:FireServer(verb,arg,extra) end
+local ui=Interface.new(player:WaitForChild("PlayerGui"),settings,send,toggleLight)
+local function clear() for _,o in outlines do o:Destroy() end table.clear(outlines) end
+local function mark(mapId,index,color)
+	local folder=workspace:FindFirstChild("TRILMatches") local visit=folder and folder:FindFirstChild(mapId) if not visit then return end
+	local map=visit:FindFirstChildWhichIsA("Model") local display=map and map:FindFirstChild("Display_"..index) local base=display and display:FindFirstChild("DisplayBase") if not base then return end
+	local h=Instance.new("Highlight") h.Name="YourEvidence" h.Adornee=base h.FillColor=color h.OutlineColor=color h.FillTransparency=0.55 h.DepthMode=Enum.HighlightDepthMode.Occluded h.Parent=base table.insert(outlines,h)
 end
-for _,gui in player.PlayerGui:GetChildren() do hideTouch(gui) end
-table.insert(connections,player.PlayerGui.ChildAdded:Connect(hideTouch))
-task.spawn(function()
-	local module=player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule",10)
-	if module then
-		local ok,playerModule=pcall(require,module)
-		if ok then controls=playerModule:GetControls() controls:Disable() end
-	end
-end)
-
-local sounds={}
-for name,id in pairs(audio) do
-	if typeof(id)=="string" and string.match(id,"^rbxassetid://[1-9]%d*$") then
-		local sound=Instance.new("Sound") sound.Name="TRIL_"..name sound.SoundId=id sound.Volume=0.35
-		sound.Looped=name=="Ambience" sound.Parent=game:GetService("SoundService") sounds[name]=sound
-		if sound.Looped then sound:Play() end
-	end
+local function update()
+	local raw=player:GetAttribute("TRILHorror") if typeof(raw)~="string" then return end
+	local ok,s=pcall(function() return Http:JSONDecode(raw) end) if not ok or typeof(s)~="table" then return end
+	local key=tostring(s.mapId)..":"..tostring(s.round)
+	if key~=lastRound or s.location~="Match" then clear() lastRound=key end
+	if s.phase=="Results" and state and state.phase~="Results" and s.reveal then for _,index in ipairs(s.reveal.indices) do mark(s.mapId,index,Color3.fromRGB(223,185,104)) end end
+	state=s ui:update(s)
+	player.CameraMode=Enum.CameraMode.Classic
 end
-local function play(name) local sound=sounds[name] if sound then sound:Play() end end
-local function clearReveal()
-	for _,object in revealObjects do object:Destroy() end table.clear(revealObjects)
-end
-local function showReveal(reveal)
-	clearReveal()
-	local room=workspace:FindFirstChild("TRILObservationRoom") if not room then return end
-	for _,name in ipairs(reveal.objects or {}) do
-		local object=room:FindFirstChild(name)
-		if object and object:IsA("Model") then
-			local cf,size=object:GetBoundingBox()
-			local anchor=Instance.new("Part") anchor.Name="TRILReveal" anchor.Anchored=true anchor.Transparency=1 anchor.CanCollide=false anchor.CanTouch=false anchor.CanQuery=false anchor.Size=size+Vector3.new(0.25,0.25,0.25) anchor.CFrame=cf anchor.Parent=workspace
-			local outline=Instance.new("SelectionBox") outline.Adornee=anchor outline.Color3=Color3.fromRGB(105,240,202) outline.LineThickness=0.06 outline.SurfaceTransparency=0.92 outline.SurfaceColor3=outline.Color3 outline.Parent=anchor
-			table.insert(revealObjects,anchor)
-		end
-	end
-end
-local function decode(raw)
-	if typeof(raw)~="string" then return nil end
-	local ok,value=pcall(function() return Http:JSONDecode(raw) end)
-	return if ok and typeof(value)=="table" then value else nil
-end
-local function personal()
-	local profile=decode(player:GetAttribute("TRILProfile"))
-	if profile then ui:personal(profile) end
-end
-local function snapshot()
-	local s=decode(stateFolder:GetAttribute("Snapshot")) if not s then return end
-	state=s ui:roundState(s) personal()
-	if s.phase~=lastPhase or s.round~=lastRound then
-		clearReveal()
-		if s.phase=="Blackout" then play("Blackout") end
-		if s.phase=="Results" and s.reveal then
-			showReveal(s.reveal)
-			local p=ui.profile
-			if p and p.result then play(if p.result.correct then "Correct" else "Incorrect") if p.result.correct and p.streak%5==0 then play("Streak") end end
-		end
-		lastPhase=s.phase lastRound=s.round
-	end
-end
-table.insert(connections,stateFolder:GetAttributeChangedSignal("Snapshot"):Connect(snapshot))
-table.insert(connections,player:GetAttributeChangedSignal("TRILProfile"):Connect(personal))
+table.insert(connections,player:GetAttributeChangedSignal("TRILHorror"):Connect(update))
+table.insert(connections,net.Feed.OnClientEvent:Connect(function(kind,data)
+	if kind=="Shop" or kind=="Guide" or kind=="Play" then ui:open(kind)
+	elseif kind=="Toast" then ui:toast(data.text,data.good)
+	elseif kind=="Evidence" then mark(data.mapId,data.index,Color3.fromRGB(130,218,193)) end
+end))
 table.insert(connections,Input.InputBegan:Connect(function(key,processed)
 	if processed then return end
-	if key.KeyCode==Enum.KeyCode.One or key.KeyCode==Enum.KeyCode.ButtonX then ui:submit(true) end
-	if key.KeyCode==Enum.KeyCode.Two or key.KeyCode==Enum.KeyCode.ButtonY then ui:submit(false) end
+	if key.KeyCode==Enum.KeyCode.F then toggleLight()
+	elseif key.KeyCode==Enum.KeyCode.Q then send("Lens")
+	elseif key.KeyCode==Enum.KeyCode.One then ui:vote(true)
+	elseif key.KeyCode==Enum.KeyCode.Two then ui:vote(false)
+	elseif key.KeyCode==Enum.KeyCode.LeftShift then sprinting=true
+	elseif key.KeyCode==Enum.KeyCode.P and state and state.location=="Lobby" then ui:open("Play") end
 end))
+table.insert(connections,Input.InputEnded:Connect(function(key) if key.KeyCode==Enum.KeyCode.LeftShift then sprinting=false end end))
+local oldBackpack=true
+pcall(function() oldBackpack=game.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.Backpack) game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack,false) end)
+local lastViewport=Vector2.zero
 table.insert(connections,Run.RenderStepped:Connect(function()
-	camera=workspace.CurrentCamera if not camera then return end
-	camera.CameraType=Enum.CameraType.Scriptable
-	local view=camera.ViewportSize
-	local aspect=math.max(0.25,view.X/math.max(view.Y,1))
-	-- Fit the entire 36-stud scene even in portrait, without allowing free-look.
-	local scale=math.max(1,1.45/aspect)
-	local side=view.Y<550 and aspect>1.3
-	local sidebar=if view.X<700 then 212 else 232
-	if side then scale=math.max(1,1.45/math.max(0.5,(view.X-sidebar-36)/view.Y)) end
-	local target=Vector3.new(0,53.5,0)
-	camera.FieldOfView=42
-	camera.CFrame=CFrame.lookAt(target+Vector3.new(8,21,42)*scale,target)
-	if side then
-		local span=2*(Vector3.new(8,21,42)*scale).Magnitude*math.tan(math.rad(21))*aspect
-		camera.CFrame*=CFrame.new(span*(sidebar-8)/(2*view.X),0,0)
-	end
-	if view~=lastViewport then ui:layout(view) lastViewport=view end
-	local now=workspace:GetServerTimeNow() ui:tick(now)
-	if state and state.phase=="Memorize" then
-		local second=math.ceil(state.endsAt-now)
-		if second~=lastSecond and second<=5 and second>0 then play("Tick") end lastSecond=second
-	end
+	local camera=workspace.CurrentCamera if not camera then return end
+	if camera.CameraType==Enum.CameraType.Scriptable then camera.CameraType=Enum.CameraType.Custom end
+	local head=player.Character and player.Character:FindFirstChild("Head")
+	local origin=if head then head.Position+camera.CFrame.LookVector*0.8 else camera.CFrame.Position
+	lamp.CFrame=CFrame.lookAt(origin,origin+camera.CFrame.LookVector)
+	spot.Enabled=flashlightOn and not (state and state.phase=="Blackout")
+	local char=player.Character local humanoid=char and char:FindFirstChildOfClass("Humanoid")
+	if humanoid and not (state and state.phase=="Blackout") then humanoid.WalkSpeed=if sprinting then 20 else 14 end
+	if camera.ViewportSize~=lastViewport then lastViewport=camera.ViewportSize ui:layout(lastViewport) end
+	ui:tick(workspace:GetServerTimeNow())
 end))
-snapshot() personal()
+update()
 script.Destroying:Connect(function()
-	for _,connection in connections do connection:Disconnect() end
-	clearReveal() ui:destroy()
-	for _,sound in pairs(sounds) do sound:Destroy() end
-	if controls then controls:Enable() end
-	for gui,enabled in pairs(hiddenTouch) do if gui.Parent then gui.Enabled=enabled end end
-	if camera then camera.CameraType=originalType camera.FieldOfView=originalFov end
+	for _,c in connections do c:Disconnect() end clear() ui:destroy() lamp:Destroy()
+	player.CameraMode=Enum.CameraMode.Classic player.CameraMaxZoomDistance=18
+	pcall(function() game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack,oldBackpack) end)
 end)

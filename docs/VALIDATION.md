@@ -1,45 +1,52 @@
-# Validation and remaining release work
+# Blackthorn horror upgrade — validation
 
-## Executed during implementation
+## Executed checks
 
-- Compiled all nine Luau files using the connected Studio executor. The final detached validation run passed **16,786 checks**.
-- Executed all nine anomalies at all three difficulties on detached geometry. Checked baseline restoration after each operation, then checked unchanged geometry.
-- Executed vote validation for early, stale, malformed, deadline, spectator, and duplicate submissions; checked reward arithmetic, wrong answers, timeouts, unchanged answers, and independent profiles.
-- Ran the shared game loop in Studio Play mode. The runtime built 31 recognizable objects, placed the character backstage, and created the HUD and fixed camera.
-- Used the actual UI to vote Changed in a forced color-change round. The server acknowledged the vote; an attempted contradictory duplicate did not overwrite it. Results awarded 100 points and 12 Mind Coins and outlined the cushion.
-- Used the actual UI to vote Unchanged in a forced unchanged round. The server revealed no change, no reveal targets, and awarded the correct reward.
-- Observed automatic transitions into subsequent rounds and timeout/streak reset behavior.
-- Inspected desktop, iPhone 17 Pro landscape/portrait, and iPad Pro M5 screenshots. Moved landscape-phone HUD/controls to a side column to stop them covering observation targets. The game's `StarterGui.ScreenOrientation` remains Sensor; main HUD uses CoreUISafeInsets and the blackout overlay intentionally covers the full screen. Studio returned to its default viewport after device checks.
-- Restored and read back the normal 15/2/10/5 timings and 70% change probability; observed a two-second blackout with no reveal fields sent to the client.
+- Compiled all eight Luau files through the connected Studio executor.
+- Ran **809 detached checks** covering exact-price purchases, insufficient funds, duplicate purchases, vote types/rounds/deadlines, duplicate voting, multiple post-vote evidence finds, independent player records, reward breakdown, unchanged answers, both maps, display reset, reachable inspection anchors, and all three lobby NPCs.
+- Started the installed game in Studio. Confirmed a walkable lobby, unanchored character, normal camera, flashlight, HUD, and all three NPC models.
+- Activated the Curator through the actual E-key prompt. Insufficient funds were rejected. A temporary, server-only Studio test wallet of exactly 1,000 coins bought the lens and left zero coins; a repeat purchase did not charge again. The Tool was granted.
+- Launched a solo investigation. Used Q to reveal the correct missing-object count through the owned lens. Used the actual voting button to lock a Missing answer.
+- Reported **two separate missing displays after voting**, through their native prompt input. The wallet received exactly **150 bonus coins**. A duplicate report paid nothing. The correct main answer then added **60 coins**, producing **210 total** with no duplicate evidence payout.
+- Launched the larger manor through its 15-second queue, with one real client. Confirmed 26 displays and walking movement. In a controlled unchanged round, the Unchanged UI vote earned 60 coins and a present-object report paid nothing. No missing targets were revealed.
+- Observed three-round visit completion and its 75-coin reward, automatic lobby return, early return, and queue cancellation.
+- Inspected night-lobby, interior, and sky screenshots. Adjusted the Curator's display to remove an obstructed NPC sightline, replaced round distant silhouettes, reduced lantern glare, moved entry spawns away from walls, added a shoulder camera offset, and scaled/stowed the held lens to keep the view clear.
+- Inspected iPhone 17 Pro landscape and portrait layouts. Fixed the modal safe-area overflow and made long instructions scrollable. Measured that the final map selector stays inside the safe GUI area in both orientations. Studio was reset to its default viewport afterward.
 
-During the first run, the initial player could spectate an empty round because Player presence preceded profile initialization. The loop now waits for initialized profiles before capturing round eligibility. A subsequent run had one eligible player in round one.
+Some first automated attempts reached short test voting windows too late. The controlled manor test was repeated with adequate remaining time and passed. These command assertions were distinct from game-script runtime errors. Avatar accessory asset-loading warnings appeared; the new environments and tools do not request those avatar assets.
 
-Avatar asset-loading warnings appeared in Output. The prototype's own assets are native parts; its audio IDs are empty. No prototype runtime script error was observed in the tested flows.
+## Final state
 
-## Not yet established
+- Normal pacing restored: solo memorize/search 30/60 seconds; manor 40/90; two-second blackout; eight-second results; three rounds per visit.
+- Normal 70% changed / 30% unchanged selection restored.
+- Studio test attributes cleared. Test balances and ownership were not saved.
+- The earlier prototype and lighting are retained in a disabled ServerStorage backup.
+- The current Studio place contains the code and edit-time previews. Place saving/publication is not claimed.
 
-- Actual multi-client/local-server tests, including simultaneous votes, a second client joining during each phase, and disconnects at the reward boundary. Shared server state and pure profile-isolation tests do not replace these tests.
-- Long-session soak testing and low-end device performance measurements.
-- Screen-reader/accessibility, physical gamepad, and physical touchscreen tests. Simulator screenshots establish layout, not hardware input behavior.
-- DataStore saving: intentionally absent from Phase 1.
-- Rojo build: not executed.
-- Audio playback: placeholders only.
-- Public publication, moderation, monetization, or release readiness.
+## Not yet verified
 
-## Before public release
+- **Three actual simultaneous clients.** The map/queue enforce capacities 1 and 3 and player evidence records are tested independently, but a one-client test cannot establish all multiplayer behavior.
+- Cross-player voting, individual evidence marks, disconnects/rejoins during creation/blackout/results, and simultaneous full-queue joins.
+- Live DataStore loading, lease contention, purchase saves, reconnects, autosave failure/retry, and shutdown behavior. Studio intentionally did not access live data.
+- Physical mobile/gamepad input; simulator screenshots establish layout, not hardware input.
+- Long-session cleanup/soak testing, many concurrent private visits, and low-end-device performance profiling.
+- Rojo build and public publication.
+- Licensed ambient audio, sound mix, music, and final launch art.
 
-1. Start a local server with at least two clients. Confirm matching round/time/room geometry and independent votes/rewards; joining mid-round must spectate until the next Memorize phase.
-2. Exercise every anomaly in live multiplayer. Confirm no hints or reveal data appear before Results, and baseline geometry returns before every Memorize phase.
-3. Vote at the deadline and spam duplicates/malformed/stale votes. Verify no extra rewards.
-4. Reset a character, leave/rejoin during Results, and run many rounds. Verify no duplicate GUI, reward, connection, or geometry growth.
-5. Test small phone, tablet, and console layouts and real input. Check each change is noticeable at its intended difficulty.
-6. Add approved sound assets, then test playback permission and loading behavior.
-7. Implement and validate persistence separately before promising saved Mind Coins or unlocks.
+## Before release
 
-## Official source references
+1. Run a local server with three clients. Confirm the queue never admits a fourth member and each player sees the same missing objects in a shared manor.
+2. Have all three report the same disappearance. Each should be paid once; nobody should receive another person's vote or lens hint.
+3. Exercise no-change rounds, duplicate/stale/deadline votes, wrong reports, respawns, early exits, and all players leaving during map creation and blackout.
+4. Buy the lens with 999, 1,000, and more than 1,000 coins; repeat purchase requests; use it twice in one round and once in a new round. Verify no extra deductions or evidence awards.
+5. Test saving in a separate published test experience. Confirm load failure never overwrites good data and permanent ownership survives purchase/reconnect/shutdown.
+6. Run many visits and watch instance/connection counts, frame time, and light/shadow quality on a low-end phone. Tune atmosphere and lighting without making missing displays unreadable.
 
-- [Roblox client/server security](https://github.com/Roblox/creator-docs/blob/main/content/en-us/scripting/security/client-server-boundary.md): validate client requests and keep rewards server-authoritative.
-- [Roblox script locations](https://github.com/Roblox/creator-docs/blob/main/content/en-us/scripting/locations.md): separate server-only rules from client presentation and shared non-secret settings.
-- [Plant reference architecture](https://github.com/Roblox/creator-docs/blob/main/content/en-us/resources/plant-reference-project.md): modular entry points, state replication, and UI responsibilities.
+## Official references
 
-All gameplay/environment code is newly written; no third-party game code or assets were copied.
+- [Roblox client/server security](https://github.com/Roblox/creator-docs/blob/main/content/en-us/scripting/security/client-server-boundary.md)
+- [Roblox script locations](https://github.com/Roblox/creator-docs/blob/main/content/en-us/scripting/locations.md)
+- [Roblox Lighting API](https://create.roblox.com/docs/reference/engine/classes/Lighting)
+- [Roblox Sky API](https://create.roblox.com/docs/reference/engine/classes/Sky)
+
+No third-party gameplay code or assets were copied.

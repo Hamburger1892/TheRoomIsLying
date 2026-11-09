@@ -1,5 +1,5 @@
 {
-  "name": "The Room Is Lying - Observation Prototype",
+  "name": "The Room Is Lying - Blackthorn Horror",
   "tree": {
     "$className": "DataModel",
     "ServerScriptService": { "TheRoomIsLying": { "$path": "src/server" } },

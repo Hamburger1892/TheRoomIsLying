@@ -1,60 +1,80 @@
-# The Room Is Lying
+# THE ROOM IS LYING — Observation Prototype
 
-A first playable Roblox prototype: inspect three chatty props, catch the liar, and pick the safe exit in a bright cartoon room. Two props tell the truth and one lies. The majority points to the safe door. Solve three rounds, then use the Encore button to replay.
+Memorize a cozy cartoon living room. Survive the blackout. Decide whether the room changed. This version implements Phase 1 of the supplied development brief and replaces the earlier two-door clue puzzle.
 
-This first puzzle is intentionally simple so the interaction loop is easy to evaluate. All three rounds currently use the same room and rule with randomized answers and liar positions. New puzzle types, room layouts, animations, sound, and a narrative reveal are future work.
+## What is implemented
 
-## Open in Roblox Studio (no extra tools)
+- A programmatically built cutaway living room with **31 recognizable environmental objects** and roughly 150 anchored parts: sofa, cushions, coffee table, books, mug, fruit bowl, TV, cabinet, speaker, bookshelf, duck, painting, clock, window, curtains, plants, chair, ottoman, floor lamp, side table, vase, basket, slippers, and trophy.
+- Synchronized repeating rounds: **15 seconds memorize → 2 seconds blackout → 10 seconds vote → 5 seconds results**. All players see the same room and round timer.
+- **70% changed / 30% unchanged** probability. Nine change types: disappearance, color, movement, rotation, size, appearance, tilted painting, swapped cushions, and lamp color. Difficulty increases after rounds three and seven; movement, rotation, and size changes become smaller.
+- Every round restores the original transforms, sizes, colors, transparency, collision settings, and lamp color before memorization.
+- Fixed observation camera. Avatars remain backstage. Landscape phones use side controls; portrait and desktop use top/bottom panels. Countdown and timer bar use server time.
+- Large Changed/Unchanged buttons; keyboard **1/2** and gamepad **X/Y** also vote. Server-side round, phase, time, type, eligibility, rate, and duplicate checks protect rewards.
+- Results name and outline the changed object, including a wireframe at the old location when something disappears.
+- Session points, streak, best streak, total correct answers, Mind Coins, lifetime coins, XP, and levels. In-game ranks panel plus Roblox leaderstats.
+- Late joiners watch the current round and enter automatically at the next memorization. Disconnects release profile/connection state.
 
-1. Create a fresh **Baseplate** place in Studio. Open **Explorer**, **Properties**, and **Output**.
-2. Under `ServerScriptService`, create a **Folder** named `TheRoomIsLying`.
-3. Inside that folder create these instances, and paste the corresponding files into their Source:
+## In your current Studio project
 
-   | Instance name | Instance type | Source file |
-   | --- | --- | --- |
-   | `Main` | Script | `src/server/Main.server.luau` |
-   | `Puzzle` | ModuleScript | `src/server/Puzzle.luau` |
-   | `RoomBuilder` | ModuleScript | `src/server/RoomBuilder.luau` |
+The upgrade was installed directly into the connected Studio experience. The earlier puzzle scripts are disabled and retained in a timestamped `ServerStorage.TRILLegacyBackup_*` folder. The Baseplate and SpawnLocation remain in the place.
 
-   Leave `Main.RunContext` as **Legacy** (the default); its location makes it run on the server. Keep exactly one copy of Main.
-4. Under `StarterPlayer > StarterPlayerScripts`, create a **LocalScript** named `RoomUI` and paste `src/client/RoomUI.client.luau`. A LocalScript does not have a RunContext property.
-5. Press **Play**. The server creates `Workspace.TRILRooms` and moves your character into your room. Use **E**, **gamepad X**, or tap/click a prompt to inspect props and choose an exit. The HUD provides the rule, notebook, and result; the notebook can be collapsed on small screens.
-6. Inspect Tick Tock, Fernando, and Smug Portrait. Pick the exit named by two of them. A wrong answer keeps the same clues and allows a retry after two seconds. A correct answer starts the next round after two seconds. After round three, use the Encore button near the doors.
-7. Stop the playtest before editing scripts. Runtime rooms disappear when the test stops. No asset uploads, HTTP access, API keys, data stores, or paid plugins are required.
+Press **Play**. You do not need to paste any code. The edit-time `Workspace.TRILRoomPreview` is replaced by the live shared room when a test starts, and returns when the test stops. **Save the place with Ctrl+S** to retain the Studio edits on disk/cloud; no automated save or publication is claimed.
 
-The room floor is at Y=48, clear of a default Baseplate. Use a fresh place to avoid overlap with an existing map. For a published prototype, configure **Max Players to 12 or fewer**; the script has twelve room slots and refuses additional joins. Progress lasts only for the current session.
+## Project structure
 
-## Optional Rojo workflow
-
-`default.project.json` maps the same instances and includes the test ModuleScript in `ServerStorage.TRILTests.PuzzleSpec`. With Rojo installed, run `rojo serve default.project.json` and connect Studio's Rojo plugin to the local server. Alternatively, build a place with:
-
-```sh
-rojo build default.project.json -o TheRoomIsLying.rbxlx
+```text
+ServerScriptService
+  TheRoomIsLying
+    Main             Script
+    RoomBuilder      ModuleScript
+    Anomalies        ModuleScript
+    RoundRules       ModuleScript
+    Tuning           ModuleScript
+ReplicatedStorage
+  TRILShared
+    Audio            ModuleScript
+StarterPlayer / StarterPlayerScripts
+  TRILClient
+    Main             LocalScript
+    ObservationUI    ModuleScript
+ServerStorage
+  TRILObservationTests
+    Validation       ModuleScript
 ```
 
-Open the generated place in Studio and press Play. The Rojo build path has not been executed during this review; the manual Studio setup above does not depend on Rojo.
+The server creates `ReplicatedStorage.TRILNet.Vote` and `TRILState` at runtime. It stores the selected anomaly and correct answer only in server-local variables. Replicated state includes anomaly details only during Results. Geometry necessarily replicates for players to observe it; this is not protection against a modified client automatically comparing geometry.
 
-## Code to review
+## Installing into a different place
 
-| File | Responsibility |
-| --- | --- |
-| `Puzzle.luau` | Pure puzzle rules: exactly one liar, unique clue discovery, exit gating, and answer evaluation. Answers stay in server-only storage. |
-| `RoomBuilder.luau` | Detached, anchored room geometry, bright primitive props, labeled exits, six native interaction prompts. Can later be replaced by cloned artist-authored templates without changing puzzle rules. |
-| `Main.server.luau` | Per-player rooms and rounds, server validation, action cooldown, delayed transitions, respawn positioning, replay, disconnect cleanup. |
-| `RoomUI.client.luau` | Client HUD and notebook driven by a complete server snapshot in one player attribute. Connects before reading the initial value, so a late client still renders current state. |
+Create the folders and instances shown above. Paste each file from `src/server`, `src/client`, and `src/shared` into the corresponding instance. `*.server.luau` is a Script, `*.client.luau` is a LocalScript, and other `.luau` source files are ModuleScripts. Names exclude those file extensions. Use a single active server bootstrap and client bootstrap. Disable/remove the earlier `RoomUI` LocalScript and earlier server scripts so they do not run beside this version.
 
-Interactions verify room ownership, live character, enabled prompt, distance, visibility, phase, and a 0.25-second cooldown. Round resolution locks before scheduling a transition. Delayed work verifies the original session/version; leaving a server cannot advance a replacement session. Clients never send an answer or choose which room/prompt the server processes.
+The room is built around `(0, 48, 0)`, with a navy diorama backdrop. Use a fresh Baseplate or check that this space is clear in an existing map. No paid assets, third-party libraries, HTTP access, API keys, DataStore access, or audio uploads are needed for Phase 1.
 
-Native prompts are used for built-in keyboard, gamepad, and touch support. Geometry and enabled prompts replicate to clients; these are not secrets. The safe answer and undiscovered clue contents stay in server session tables. Discovered notebook contents are sent as a player attribute, which is replicated and is **not private from other clients**. Separate rooms isolate progression and interactions, not visual or network secrecy.
+For Rojo, `default.project.json` maps all runtime scripts; `rojo serve default.project.json` connects a Studio Rojo plugin. An alternative is `rojo build default.project.json -o TheRoomIsLying.rbxlx`, followed by opening that file in Studio. Rojo itself was not installed or executed during this task. The direct Studio installation was tested.
+
+## Scoring and tuning
+
+A correct answer gives 100 points plus a capped streak bonus and 10 Mind Coins plus a streak bonus. Every fifth consecutive correct answer adds 25 extra coins. Wrong or missing answers give no points and break the streak. Spectators are not rewarded or penalized. XP increases by 25 per correct answer, with one level per 100 XP.
+
+Defaults live in `Tuning.luau`. Optional Experience Configs can be enabled with that module's `UseExperienceConfigs` attribute; keys use the `TRIL_` prefix. Values are bounded and read at round boundaries, with defaults when the service is unavailable. This is optional and disabled initially.
+
+For faster **Studio-only** testing, add numeric attributes to the Tuning module: `MemorizeSeconds`, `BlackoutSeconds`, `VoteSeconds`, `ResultsSeconds`, or `ChangeChance`. A server-only `ForceKind` attribute on the Anomalies module can select `None`, `Disappeared`, `Color`, `Moved`, `Rotated`, `Resized`, `Appeared`, `Painting`, `Swapped`, or `Light`. These overrides are ignored outside Studio. Remove them before normal playtesting. The installed project has normal timings and random changes restored after validation.
+
+## Audio and later phases
+
+`Audio.luau` contains clearly marked **silent placeholders** for ticking, blackout, success, failure, streaks, and ambience. Insert approved audio IDs you have permission to use; empty values make no asset requests. No working sound effects are claimed.
+
+Progress currently lasts **only for the server session**. DataStore persistence, cosmetic purchases, daily challenges, achievements, more room themes, rare changes, matchmaking, game icons, and public release work remain later phases. The prototype makes no persistence calls, so Studio API access does not need enabling. DataStore saving and error/retry handling must be implemented and tested before persistent rewards are advertised.
 
 ## Validation
 
-See [docs/REVIEW.md](docs/REVIEW.md) for inspected GitHub sources, results, limitations, and the manual acceptance checklist.
-
-To rerun puzzle tests with the manual setup, create a ModuleScript named `PuzzleSpec` inside `ServerStorage > TRILTests` and paste `tests/Puzzle.spec.luau`. In Studio's Command Bar, while stopped, run:
+See [docs/VALIDATION.md](docs/VALIDATION.md) for executed checks and remaining acceptance tests. To rerun the geometry/rules tests, put `tests/Validation.luau` into the `ServerStorage.TRILObservationTests.Validation` ModuleScript. In Studio's Command Bar while stopped:
 
 ```lua
-print(require(game.ServerStorage.TRILTests.PuzzleSpec)(require(game.ServerScriptService.TheRoomIsLying.Puzzle)))
+local server = game.ServerScriptService.TheRoomIsLying
+print(require(game.ServerStorage.TRILObservationTests.Validation)(
+    require(server.RoomBuilder), require(server.Anomalies), require(server.RoundRules)
+))
 ```
 
-Expected: `Puzzle: 93 assertions passed across all six puzzle configurations`. The tests cover the two exits crossed with all three liar positions, clue uniqueness, incomplete notebooks, invalid indices/exits, retry state, and session isolation. Rerun after changing puzzle logic; restart Studio's test session to clear cached module results as needed.
+Restart the playtest after changing modules to avoid cached require results. The test creates a detached room and destroys it when finished.

@@ -1,0 +1,19 @@
+{
+  "name": "The Room Is Lying - First Playable",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "TheRoomIsLying": { "$path": "src/server" }
+    },
+    "ServerStorage": {
+      "TRILTests": {
+        "PuzzleSpec": { "$path": "tests/Puzzle.spec.luau" }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "RoomUI": { "$path": "src/client/RoomUI.client.luau" }
+      }
+    }
+  }
+}
